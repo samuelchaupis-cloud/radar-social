@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  worker-crawler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: worker_crawler
+    command: ["python", "-m", "src.crawler"]
+    volumes:
+      - radar_data:/app/data
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/radar.db
+
+  worker-outbox:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: worker_outbox
+    command: ["python", "-m", "src.outbox"]
+    volumes:
+      - radar_data:/app/data
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/radar.db
+
+volumes:
+  radar_data:
