@@ -1,41 +1,55 @@
-# Stage 1: Builder
+# --- Stage 1: Build ---
 FROM python:3.11-slim AS builder
 
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
 WORKDIR /app
+
+# Instalar dependencias del sistema requeridas para extensiones C/Rust y red
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Instalación optimizada para caché
+# Instalar dependencias puras (aprovechando cache de Docker)
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
 
-# Instalación final
+# Copiar el codigo fuente e instalar
 COPY src/ ./src/
 RUN uv sync --frozen --no-dev
 
-# Stage 2: Runtime Rootless
+# --- Stage 2: Runtime Rootless ---
 FROM python:3.11-slim
 
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
+
+# Instalar dependencias de red en runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Inicializar entorno rootless y garantizar permisos de directorios montables
-RUN groupadd -g 1000 appgroup && \
-    useradd -u 1000 -g appgroup -s /bin/bash -m appuser && \
+# Crear usuario rootless (UID 10001) para mayor seguridad y evitar colisiones
+RUN groupadd -g 10001 appgroup && \
+    useradd -u 10001 -g appgroup -s /bin/bash -m appuser && \
     mkdir -p /app/data && \
     chown -R appuser:appgroup /app/data
 
-# Copiar artefactos de compilación asignando directamente la propiedad a appuser
+# Copiar entorno virtual y cdigo fuente
 COPY --from=builder --chown=appuser:appgroup /app/.venv /app/.venv
 COPY --from=builder --chown=appuser:appgroup /app/src /app/src
 
 USER appuser
 
-CMD ["python", "-m", "src.main"]
+ENTRYPOINT ["python", "-m", "radar_social.main"]
+CMD ["all"]

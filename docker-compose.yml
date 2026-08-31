@@ -1,29 +1,27 @@
-version: "3.8"
-
 services:
-  worker-crawler:
+  radar-social-etl:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: worker_crawler
-    command: ["python", "-m", "src.crawler"]
-    volumes:
-      - radar_data:/app/data
+    image: radar-social-etl:latest
+    container_name: radar_etl_worker
     restart: unless-stopped
+    # Ejecutamos con el user/group creado en el Dockerfile para mitigar riesgos de escalada
+    user: "10001:10001"
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:////app/data/radar.db
-
-  worker-outbox:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: worker_outbox
-    command: ["python", "-m", "src.outbox"]
+      # Definimos explicitamente la ruta de la base de datos dentro del volumen persistente
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/radar_social.db
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN:-dummy_token_for_local}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-dummy_chat}
     volumes:
-      - radar_data:/app/data
-    restart: unless-stopped
-    environment:
-      - DATABASE_URL=sqlite+aiosqlite:////app/data/radar.db
+      - radar_social_data:/app/data
+    deploy:
+      resources:
+        limits:
+          # Acotar la memoria a 45MB como dicta la arquitectura (Contrapresion)
+          memory: 45M
+          cpus: "0.5"
 
 volumes:
-  radar_data:
+  radar_social_data:
+    driver: local

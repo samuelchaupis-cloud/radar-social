@@ -1,45 +1,72 @@
-name: CI Quality Gates
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  verify:
-    name: Zero-Defect Pipeline
+  lint:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+      - run: uv sync --locked --group dev
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          python-version: "3.11"
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          enable-cache: true
+      - run: uv sync --locked --group dev
+      - run: uv run mypy src/
 
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
+  test:
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --locked --group dev
+      - run: uv run bandit -r src/ -ll -ii
+      - run: uv run pytest tests/ -v --cov=src --cov-fail-under=85
 
-      - name: Security Audit (Bandit)
-        run: uv run bandit -r src/ -ll -ii
-
-      - name: Code Formatting (Ruff Format)
-        run: uv run ruff format --check .
-
-      - name: Linting (Ruff Check)
-        run: uv run ruff check .
-
-      - name: Type Checking (Mypy)
-        run: uv run mypy src/
-
-      - name: Mutation Assertions (Pytest)
-        run: uv run pytest tests/ -v --cov=src --cov-fail-under=85
+  all-checks-passed:
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test]
+    if: always()
+    steps:
+      - name: Fail if any needed job did not succeed
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "::error::A required job failed or was cancelled."
+            exit 1
+          fi
+          echo "All checks passed."
