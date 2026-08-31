@@ -1,8 +1,14 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from tenacity.wait import wait_random_exponential
 
 from radar_social.etl.extract import extraer_html_resiliente
+
+
+def test_extraer_html_usa_jitter() -> None:
+    # Verificamos que el backoff usa full jitter para evitar Thundering Herd
+    assert isinstance(extraer_html_resiliente.retry.wait, wait_random_exponential)
 
 
 @pytest.mark.asyncio

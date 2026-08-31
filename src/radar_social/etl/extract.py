@@ -1,11 +1,8 @@
-import asyncio
 from typing import Any
 
 from curl_cffi.requests import AsyncSession
 from curl_cffi.requests.errors import RequestsError
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
-
-SEMAPHORE = asyncio.Semaphore(10)
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random_exponential
 
 
 def on_retry_inject_proxy(retry_state: Any) -> None:
@@ -14,16 +11,15 @@ def on_retry_inject_proxy(retry_state: Any) -> None:
 
 
 @retry(
-    wait=wait_exponential(multiplier=1, min=4, max=10),
+    wait=wait_random_exponential(multiplier=1, min=4, max=10),
     stop=stop_after_attempt(5),
     retry=retry_if_exception_type(RequestsError),
     before_sleep=on_retry_inject_proxy,
 )
 async def extraer_html_resiliente(url: str) -> str:
-    async with SEMAPHORE:
-        # Se instancia un AsyncSession nuevo para no reusar el mismo proxy/sesión
-        # en caso de fallo y evitar fugas de sockets asíncronos.
-        async with AsyncSession(impersonate="chrome110") as client:
-            response = await client.get(url, timeout=10)
-            response.raise_for_status()
-            return str(response.text)
+    # Se instancia un AsyncSession nuevo para no reusar el mismo proxy/sesión
+    # en caso de fallo y evitar fugas de sockets asíncronos.
+    async with AsyncSession(impersonate="chrome110") as client:
+        response = await client.get(url, timeout=10)
+        response.raise_for_status()
+        return str(response.text)

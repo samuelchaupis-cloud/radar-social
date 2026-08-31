@@ -5,7 +5,7 @@ from sqlalchemy import select, update
 from tenacity import (
     AsyncRetrying,
     stop_after_attempt,
-    wait_exponential,
+    wait_random_exponential,
 )
 
 from radar_social.infrastructure.database import AsyncSessionLocal, OutboxEventModel
@@ -103,7 +103,7 @@ class OutboxDispatcher:
 
         async for attempt in AsyncRetrying(
             stop=stop_after_attempt(3),
-            wait=wait_exponential(multiplier=1, min=2, max=10),
+            wait=wait_random_exponential(multiplier=1, min=2, max=10),
             reraise=True,
         ):
             with attempt:

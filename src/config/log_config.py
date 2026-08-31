@@ -2,13 +2,51 @@ import logging
 import logging.config
 import queue
 import sys
+from collections.abc import MutableMapping
 from logging.handlers import QueueHandler, QueueListener
+from typing import Any
 
 import structlog
 from structlog.types import Processor
 
 # Global reference to the listener so it can be stopped on shutdown
 _log_listener: QueueListener | None = None
+
+
+class ObfuscatePIIProcessor:
+    def __init__(self) -> None:
+        self.sensitive_keys = {
+            "password",
+            "passwd",
+            "secret",
+            "token",
+            "api_key",
+            "access_token",
+            "authorization",
+            "bearer",
+            "email",
+            "dni",
+            "rut",
+            "phone",
+            "telefono",
+            "tarjeta",
+            "credit_card",
+        }
+
+    def _obfuscate(self, data: dict[str, Any] | list[Any] | Any) -> Any:
+        if isinstance(data, dict):
+            return {
+                k: "***REDACTED***" if str(k).lower() in self.sensitive_keys else self._obfuscate(v)
+                for k, v in data.items()
+            }
+        elif isinstance(data, list):
+            return [self._obfuscate(item) for item in data]
+        return data
+
+    def __call__(
+        self, logger: Any, name: str, event_dict: MutableMapping[str, Any]
+    ) -> dict[str, Any]:
+        return dict(self._obfuscate(dict(event_dict)))
 
 
 def setup_logging(json_logs: bool = True) -> None:
@@ -25,6 +63,7 @@ def setup_logging(json_logs: bool = True) -> None:
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
         structlog.stdlib.PositionalArgumentsFormatter(),
+        ObfuscatePIIProcessor(),
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
