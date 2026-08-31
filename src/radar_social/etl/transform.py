@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 
 from pydantic import HttpUrl
@@ -31,3 +32,6 @@ def parsear_licitacion(html: str) -> LicitacionCreate:
     return LicitacionCreate(
         titulo=titulo, descripcion=desc, url_fuente=HttpUrl(url), fecha_publicacion=fecha
     )
+
+async def parsear_licitacion_async(html: str) -> LicitacionCreate:
+    return await asyncio.to_thread(parsear_licitacion, html)

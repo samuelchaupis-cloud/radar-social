@@ -1,11 +1,18 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from pytest_httpx import HTTPXMock
 
 from radar_social.etl.extract import extraer_html_resiliente
 
 
 @pytest.mark.asyncio
-async def test_extraer_html_resiliente_exito(httpx_mock: HTTPXMock) -> None:
-    httpx_mock.add_response(url="http://ejemplo.com", text="<html>OK</html>")
+@patch("radar_social.etl.extract.AsyncSession.get")
+async def test_extraer_html_resiliente_exito(mock_get) -> None:
+    mock_response = AsyncMock()
+    mock_response.status_code = 200
+    mock_response.text = "<html>OK</html>"
+    mock_response.raise_for_status.return_value = None
+    mock_get.return_value = mock_response
+
     resultado = await extraer_html_resiliente("http://ejemplo.com")
     assert resultado == "<html>OK</html>"

@@ -21,9 +21,24 @@ def test_licitacion_create_validacion_estricta() -> None:
     # Éxito con datos correctos
     dt = datetime.now(UTC)
     lic = LicitacionCreate(
-        titulo="Licitacion 1",
+        titulo=" Licitacion 1  \x00 ",
         descripcion="Desc",
         url_fuente=HttpUrl("http://ejemplo.com"),
         fecha_publicacion=dt,
     )
-    assert lic.titulo == "Licitacion 1"
+    # Verifica normalización (strip, lowercase, no nulos)
+    assert lic.titulo == "licitacion 1"
+    
+    # Verifica generación de hash
+    assert isinstance(lic.hash_id, str)
+    assert len(lic.hash_id) == 64
+
+def test_licitacion_max_length() -> None:
+    dt = datetime.now(UTC)
+    with pytest.raises(ValidationError):
+        LicitacionCreate(
+            titulo="a" * 256,
+            descripcion="Desc",
+            url_fuente=HttpUrl("http://ejemplo.com"),
+            fecha_publicacion=dt,
+        )

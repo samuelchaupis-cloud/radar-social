@@ -1,10 +1,17 @@
+import os
+import tempfile
 from datetime import UTC, datetime
 
 import pytest
 from pydantic import HttpUrl
 
-from radar_social.domain.models import LicitacionCreate
-from radar_social.infrastructure.database import (
+# Creamos un DB temporal real para evitar problemas con in-memory y threading
+fd, test_db_path = tempfile.mkstemp(suffix=".db")
+os.close(fd)
+os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{test_db_path}"
+
+from radar_social.domain.models import LicitacionCreate  # noqa: E402
+from radar_social.infrastructure.database import (  # noqa: E402
     guardar_licitacion,
     init_db,
     obtener_eventos_outbox,
@@ -12,10 +19,15 @@ from radar_social.infrastructure.database import (
 )
 
 
+@pytest.fixture(autouse=True)
+async def setup_teardown():
+    await init_db()
+    yield
+    # Cleanup after test if needed
+    
+
 @pytest.mark.asyncio
 async def test_guardar_licitacion_transaccional() -> None:
-    await init_db()
-
     lic = LicitacionCreate(
         titulo="Licitacion Prueba",
         descripcion="Desc",

@@ -1,20 +1,36 @@
 import hashlib
 import json
+import os
 from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import JSON, DateTime, Integer, String, select
+from sqlalchemy import JSON, DateTime, Integer, String, event, select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from radar_social.domain.models import LicitacionCreate
 
-# SQLite en memoria por defecto para tests, journal_mode WAL configurado vía
-# SQLAlchemy connect_args si se requiere.
-DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# SQLite en archivo por defecto para soportar concurrencia REAL.
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///radar_social.db")
 
 engine = create_async_engine(DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
 
+@event.listens_for(engine.sync_engine, "connect")
+def set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.execute("PRAGMA busy_timeout=5000")
+    cursor.close()
+
+@event.listens_for(engine.sync_engine, "begin")
+def do_begin(conn: Any) -> None:
+    conn.exec_driver_sql("BEGIN IMMEDIATE")
+
 AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
+
 
 
 class Base(DeclarativeBase):
@@ -55,6 +71,12 @@ def calcular_hash(lic: LicitacionCreate) -> str:
     return hashlib.sha256(cadena.encode("utf-8")).hexdigest()
 
 
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=0.1, min=0.1, max=2),
+    retry=retry_if_exception_type(OperationalError),
+    reraise=True,
+)
 async def guardar_licitacion(licitacion: LicitacionCreate) -> None:
     async with AsyncSessionLocal() as session:
         async with session.begin():
