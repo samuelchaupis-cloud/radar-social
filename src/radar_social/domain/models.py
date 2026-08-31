@@ -15,7 +15,7 @@ def normalize_string(v: str) -> str:
 
 
 class LicitacionBase(BaseModel):
-    model_config = ConfigDict(strict=True)
+    model_config = ConfigDict(strict=True, extra="forbid")
     titulo: str = Field(min_length=5, max_length=255)
     descripcion: str = Field(max_length=10000)
     url_fuente: HttpUrl = Field(max_length=2083)
