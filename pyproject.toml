@@ -16,6 +16,7 @@ dependencies = [
     "structlog>=24.1.0",
     "tenacity>=8.2.3",
     "aiosqlite>=0.22.1",
+    "curl-cffi>=0.16.2",
 ]
 
 

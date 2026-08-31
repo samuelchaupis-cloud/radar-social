@@ -45,8 +45,11 @@ El motor de crawling está diseñado explícitamente para sobrevivir bloqueos, W
 ### Domain Anti-Corruption Layer (Lente 2)
 Todos los datos ingeridos pasan por un embudo de validación estricta (Pydantic v2), que garantiza inmutabilidad, conversión correcta (ej. fechas UTC) y descarte de payloads falsos (páginas de captura 200 OK con contenido vacío).
 
-### Observability & Logging (Lente 6)
-- **<!-- TODO: fill in -->** (Por defecto se utilizará `structlog` para logging JSON estructurado).
+### Observabilidad & Logging (Lente 6)
+Implementación basada en **`structlog`** con patrón *Task-Local Context* (`contextvars`). 
+- Generación de NDJSON para Producción y texto coloreado tabular para Desarrollo.
+- Inyección de variables asíncronas (`request_id`, `tender_hash`) atadas a la corrutina en ejecución.
+- Puente no-bloqueante (`QueueHandler` + `QueueListener`) para evitar detener el event loop por cuellos de botella de I/O físico (Zero-Loss logs).
 
 ## 5. Data Stores
 
@@ -63,8 +66,9 @@ Base de datos principal integrada y sin dependencias externas, configurada de ma
 
 ## 7. Deployment & Infrastructure
 
-- **<!-- TODO: fill in -->** (Aún no se ha definido si correrá sobre Docker, contenedores sin root o máquinas virtuales puras).
-- **<!-- TODO: fill in -->** (Configuraciones de CI/CD por definir).
+- **VPS Single-Node (Bajo Coste):** Despliegue en un VPS simple (ej. Hetzner) apalancando la concurrencia nativa asíncrona y la resiliencia de SQLite WAL.
+- **Contenerización Docker Rootless:** Dos daemons gestionados por `docker-compose` (`worker-crawler` y `worker-outbox`). Dockerfile Multi-Stage generado con `uv` para minimizar tamaño y superficie de ataque, con volumen nombrado persistente solo para SQLite `/app/data`.
+- **Integración Continua (CI/CD):** Pipeline obligatorio en **GitHub Actions** aplicando *Zero-Defect Loop* (`ruff`, `mypy`, `bandit`, `pytest` >= 85%) antes del build de imágenes en GHCR.
 
 ## 8. Security & Compliance (Lente 4 & Lente 5)
 
