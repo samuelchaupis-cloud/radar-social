@@ -14,7 +14,8 @@ dependencies = [
     "sqlalchemy>=2.0",
     "alembic>=1.13.1",
     "structlog>=24.1.0",
-    "tenacity>=8.2.3"
+    "tenacity>=8.2.3",
+    "aiosqlite>=0.22.1",
 ]
 
 
@@ -35,6 +36,14 @@ ignore = []
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+plugins = [
+    "pydantic.mypy"
+]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
@@ -51,6 +60,7 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.5",
     "pytest-cov>=4.1.0",
+    "pytest-httpx>=0.36.2",
     "ruff>=0.3.0",
 ]
 [tool.coverage.run]

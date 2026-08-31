@@ -1,10 +1,12 @@
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import ValidationError
+
 from radar_social.domain.models import LicitacionCreate
-from datetime import datetime, timezone
 
 
-def test_licitacion_create_validacion_estricta():
+def test_licitacion_create_validacion_estricta() -> None:
     # Falla intencionalmente por tipos incorrectos
     with pytest.raises(ValidationError):
         LicitacionCreate(
@@ -15,7 +17,7 @@ def test_licitacion_create_validacion_estricta():
         )
 
     # Éxito con datos correctos
-    dt = datetime.now(timezone.utc)
+    dt = datetime.now(UTC)
     lic = LicitacionCreate(
         titulo="Licitacion 1",
         descripcion="Desc",
