@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 
 from curl_cffi.requests import AsyncSession
 from curl_cffi.requests.errors import RequestsError
@@ -7,7 +8,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 SEMAPHORE = asyncio.Semaphore(10)
 
 
-def on_retry_inject_proxy(retry_state):
+def on_retry_inject_proxy(retry_state: Any) -> None:
     # En un entorno real, aquí se extrae y asigna un proxy fresco al state o variables de entorno.
     pass
 
@@ -25,4 +26,4 @@ async def extraer_html_resiliente(url: str) -> str:
         async with AsyncSession(impersonate="chrome110") as client:
             response = await client.get(url, timeout=10)
             response.raise_for_status()
-            return response.text
+            return str(response.text)

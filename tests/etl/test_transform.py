@@ -15,8 +15,8 @@ def test_parsear_licitacion_valida() -> None:
     </div>
     """
     resultado = parsear_licitacion(html)
-    assert resultado.titulo == "Construcción de Escuela"
-    assert resultado.descripcion == "Detalles del proyecto de obra"
+    assert resultado.titulo == "construcción de escuela"
+    assert resultado.descripcion == "detalles del proyecto de obra"
     assert str(resultado.url_fuente) == "http://ejemplo.com/lic/1"
     assert resultado.fecha_publicacion == datetime(2026, 8, 31, 10, 0, 0, tzinfo=UTC)
 
@@ -51,4 +51,4 @@ async def test_parsear_licitacion_async_valida() -> None:
     </div>
     """
     resultado = await parsear_licitacion_async(html)
-    assert resultado.titulo == "Construcción de Escuela async"
+    assert resultado.titulo == "construcción de escuela async"

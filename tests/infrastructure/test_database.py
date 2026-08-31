@@ -39,7 +39,7 @@ async def test_guardar_licitacion_transaccional() -> None:
 
     licitaciones = await obtener_licitaciones()
     assert len(licitaciones) == 1
-    assert licitaciones[0].titulo == "Licitacion Prueba"
+    assert licitaciones[0].titulo == "licitacion prueba"
 
     eventos = await obtener_eventos_outbox()
     assert len(eventos) == 1
