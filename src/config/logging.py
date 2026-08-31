@@ -56,9 +56,15 @@ def setup_logging(json_logs: bool = True) -> None:
     stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(formatter)
 
+    class StructlogQueueHandler(QueueHandler):
+        def prepare(self, record):
+            # QueueHandler por defecto llama a getMessage() que stringifica record.msg
+            # Como structlog necesita el dict para ProcessorFormatter, devolvemos el record tal cual.
+            return record
+
     # Usamos una cola acotada para evitar OOM (Memory Leak Lente 4)
     log_queue: queue.Queue = queue.Queue(maxsize=10000)
-    queue_handler = QueueHandler(log_queue)
+    queue_handler = StructlogQueueHandler(log_queue)
 
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
