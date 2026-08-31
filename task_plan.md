@@ -37,6 +37,7 @@ from pydantic import ValidationError
 from radar_social.domain.models import LicitacionCreate
 from datetime import datetime, timezone
 
+
 def test_licitacion_create_validacion_estricta():
     # Falla intencionalmente por tipos incorrectos
     with pytest.raises(ValidationError):
@@ -44,16 +45,16 @@ def test_licitacion_create_validacion_estricta():
             titulo=123,
             descripcion="Descripción válida",
             url_fuente="http://ejemplo.com",
-            fecha_publicacion="no-una-fecha"
+            fecha_publicacion="no-una-fecha",
         )
-    
+
     # Éxito con datos correctos
     dt = datetime.now(timezone.utc)
     lic = LicitacionCreate(
         titulo="Licitacion 1",
         descripcion="Desc",
         url_fuente="http://ejemplo.com",
-        fecha_publicacion=dt
+        fecha_publicacion=dt,
     )
     assert lic.titulo == "Licitacion 1"
 ```
@@ -69,6 +70,7 @@ Expected: FAIL con "ModuleNotFoundError"
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from datetime import datetime
 
+
 class LicitacionBase(BaseModel):
     model_config = ConfigDict(strict=True)
     titulo: str = Field(min_length=5)
@@ -76,8 +78,10 @@ class LicitacionBase(BaseModel):
     url_fuente: HttpUrl
     fecha_publicacion: datetime
 
+
 class LicitacionCreate(LicitacionBase):
     pass
+
 
 class Licitacion(LicitacionBase):
     hash_id: str
@@ -113,6 +117,7 @@ import pytest
 import httpx
 from radar_social.etl.extract import extraer_html_resiliente
 
+
 @pytest.mark.asyncio
 async def test_extraer_html_resiliente_exito(httpx_mock):
     httpx_mock.add_response(url="http://ejemplo.com", text="<html>OK</html>")
@@ -131,10 +136,11 @@ Expected: FAIL con "ImportError"
 import httpx
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 
+
 @retry(
     wait=wait_exponential(multiplier=1, min=4, max=10),
     stop=stop_after_attempt(5),
-    retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError))
+    retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
 )
 async def extraer_html_resiliente(url: str) -> str:
     async with httpx.AsyncClient() as client:
@@ -174,18 +180,20 @@ from radar_social.etl.transform import parsear_licitacion
 from radar_social.domain.models import LicitacionCreate
 from pydantic import ValidationError
 
+
 def test_parsear_licitacion_valida():
-    html = '''
+    html = """
     <div class="licitacion">
         <h1 class="titulo">Construcción de Escuela</h1>
         <p class="desc">Detalles del proyecto de obra</p>
         <span class="fecha">2026-08-31T10:00:00Z</span>
         <a class="enlace" href="http://ejemplo.com/lic/1">Enlace</a>
     </div>
-    '''
+    """
     resultado = parsear_licitacion(html)
     assert resultado.titulo == "Construcción de Escuela"
     assert resultado.descripcion == "Detalles del proyecto de obra"
+
 
 def test_parsear_licitacion_incompleta():
     html = '<div class="licitacion"><h1 class="titulo">Incompleto</h1></div>'
@@ -204,6 +212,7 @@ Expected: FAIL con "ImportError"
 from selectolax.parser import HTMLParser
 from radar_social.domain.models import LicitacionCreate
 from datetime import datetime
+
 
 def parsear_licitacion(html: str) -> LicitacionCreate:
     tree = HTMLParser(html)
@@ -226,10 +235,7 @@ def parsear_licitacion(html: str) -> LicitacionCreate:
     fecha = datetime.fromisoformat(fecha_str.replace("Z", "+00:00"))
 
     return LicitacionCreate(
-        titulo=titulo,
-        descripcion=desc,
-        url_fuente=url,
-        fecha_publicacion=fecha
+        titulo=titulo, descripcion=desc, url_fuente=url, fecha_publicacion=fecha
     )
 ```
 
@@ -260,27 +266,33 @@ git commit -m "feat: implementar parser defensivo de HTML usando selectolax"
 ```python
 import pytest
 import asyncio
-from radar_social.infrastructure.database import guardar_licitacion, obtener_licitaciones, obtener_eventos_outbox, init_db
+from radar_social.infrastructure.database import (
+    guardar_licitacion,
+    obtener_licitaciones,
+    obtener_eventos_outbox,
+    init_db,
+)
 from radar_social.domain.models import LicitacionCreate
 from datetime import datetime, timezone
+
 
 @pytest.mark.asyncio
 async def test_guardar_licitacion_transaccional():
     await init_db()
-    
+
     lic = LicitacionCreate(
         titulo="Licitacion Prueba",
         descripcion="Desc",
         url_fuente="http://ejemplo.com",
-        fecha_publicacion=datetime.now(timezone.utc)
+        fecha_publicacion=datetime.now(timezone.utc),
     )
-    
+
     await guardar_licitacion(lic)
-    
+
     licitaciones = await obtener_licitaciones()
     assert len(licitaciones) == 1
     assert licitaciones[0].titulo == "Licitacion Prueba"
-    
+
     eventos = await obtener_eventos_outbox()
     assert len(eventos) == 1
     assert eventos[0].event_type == "TELEGRAM_ALERT"
@@ -305,19 +317,14 @@ from radar_social.domain.models import LicitacionCreate
 # SQLite en memoria por defecto para tests, journal_mode WAL configurado vía SQLAlchemy connect_args si se requiere.
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-engine = create_async_engine(
-    DATABASE_URL, 
-    echo=False,
-    connect_args={"check_same_thread": False}
-)
+engine = create_async_engine(DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
 
-AsyncSessionLocal = async_sessionmaker(
-    bind=engine,
-    expire_on_commit=False
-)
+AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
+
 
 class Base(DeclarativeBase):
     pass
+
 
 class LicitacionModel(Base):
     __tablename__ = "licitacion"
@@ -326,7 +333,10 @@ class LicitacionModel(Base):
     descripcion: Mapped[str] = mapped_column(String)
     url_fuente: Mapped[str] = mapped_column(String)
     fecha_publicacion: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
 
 class OutboxEventModel(Base):
     __tablename__ = "outbox_events"
@@ -335,45 +345,51 @@ class OutboxEventModel(Base):
     payload: Mapped[str] = mapped_column(JSON)
     status: Mapped[str] = mapped_column(String, default="PENDING")
     retry_count: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
 
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+
 def calcular_hash(lic: LicitacionCreate) -> str:
     cadena = f"{lic.titulo}{lic.descripcion}{lic.fecha_publicacion.isoformat()}"
-    return hashlib.sha256(cadena.encode('utf-8')).hexdigest()
+    return hashlib.sha256(cadena.encode("utf-8")).hexdigest()
+
 
 async def guardar_licitacion(licitacion: LicitacionCreate) -> None:
     async with AsyncSessionLocal() as session:
         async with session.begin():
             hash_id = calcular_hash(licitacion)
-            
+
             db_lic = LicitacionModel(
                 hash_id=hash_id,
                 titulo=licitacion.titulo,
                 descripcion=licitacion.descripcion,
                 url_fuente=str(licitacion.url_fuente),
-                fecha_publicacion=licitacion.fecha_publicacion
+                fecha_publicacion=licitacion.fecha_publicacion,
             )
             session.add(db_lic)
-            
+
             payload = licitacion.model_dump_json()
-            db_event = OutboxEventModel(
-                event_type="TELEGRAM_ALERT",
-                payload=json.loads(payload)
-            )
+            db_event = OutboxEventModel(event_type="TELEGRAM_ALERT", payload=json.loads(payload))
             session.add(db_event)
+
 
 async def obtener_licitaciones() -> list[LicitacionModel]:
     from sqlalchemy import select
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(LicitacionModel))
         return list(result.scalars().all())
 
+
 async def obtener_eventos_outbox() -> list[OutboxEventModel]:
     from sqlalchemy import select
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(OutboxEventModel))
         return list(result.scalars().all())

@@ -2,6 +2,8 @@ from datetime import UTC, datetime
 
 import pytest
 
+from pydantic import HttpUrl
+
 from radar_social.domain.models import LicitacionCreate
 from radar_social.infrastructure.database import (
     guardar_licitacion,
@@ -18,7 +20,7 @@ async def test_guardar_licitacion_transaccional() -> None:
     lic = LicitacionCreate(
         titulo="Licitacion Prueba",
         descripcion="Desc",
-        url_fuente="http://ejemplo.com",
+        url_fuente=HttpUrl("http://ejemplo.com"),
         fecha_publicacion=datetime.now(UTC),
     )
 
