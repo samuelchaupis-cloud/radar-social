@@ -17,6 +17,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///radar_social.db")
 
 engine = create_async_engine(DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
 
+
 @event.listens_for(engine.sync_engine, "connect")
 def set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
     cursor = dbapi_connection.cursor()
@@ -25,12 +26,13 @@ def set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
     cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
 
+
 @event.listens_for(engine.sync_engine, "begin")
 def do_begin(conn: Any) -> None:
     conn.exec_driver_sql("BEGIN IMMEDIATE")
 
-AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
+AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 
 class Base(DeclarativeBase):

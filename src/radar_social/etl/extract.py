@@ -21,7 +21,7 @@ def on_retry_inject_proxy(retry_state: Any) -> None:
 )
 async def extraer_html_resiliente(url: str) -> str:
     async with SEMAPHORE:
-        # Se instancia un AsyncSession nuevo para no reusar el mismo proxy/sesión 
+        # Se instancia un AsyncSession nuevo para no reusar el mismo proxy/sesión
         # en caso de fallo y evitar fugas de sockets asíncronos.
         async with AsyncSession(impersonate="chrome110") as client:
             response = await client.get(url, timeout=10)

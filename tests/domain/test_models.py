@@ -28,10 +28,11 @@ def test_licitacion_create_validacion_estricta() -> None:
     )
     # Verifica normalización (strip, lowercase, no nulos)
     assert lic.titulo == "licitacion 1"
-    
+
     # Verifica generación de hash
     assert isinstance(lic.hash_id, str)
     assert len(lic.hash_id) == 64
+
 
 def test_licitacion_max_length() -> None:
     dt = datetime.now(UTC)

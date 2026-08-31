@@ -12,6 +12,9 @@ os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{test_db_path}"
 
 from radar_social.domain.models import LicitacionCreate  # noqa: E402
 from radar_social.infrastructure.database import (  # noqa: E402
+    AsyncSessionLocal,
+    LicitacionModel,
+    OutboxEventModel,
     guardar_licitacion,
     init_db,
     obtener_eventos_outbox,
@@ -22,9 +25,12 @@ from radar_social.infrastructure.database import (  # noqa: E402
 @pytest.fixture(autouse=True)
 async def setup_teardown():
     await init_db()
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            await session.execute(LicitacionModel.__table__.delete())
+            await session.execute(OutboxEventModel.__table__.delete())
     yield
-    # Cleanup after test if needed
-    
+
 
 @pytest.mark.asyncio
 async def test_guardar_licitacion_transaccional() -> None:
