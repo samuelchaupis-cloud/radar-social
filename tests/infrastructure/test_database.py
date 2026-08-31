@@ -1,7 +1,6 @@
 from datetime import UTC, datetime
 
 import pytest
-
 from pydantic import HttpUrl
 
 from radar_social.domain.models import LicitacionCreate
