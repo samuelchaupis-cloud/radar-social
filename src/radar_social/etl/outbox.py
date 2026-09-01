@@ -98,7 +98,26 @@ class OutboxDispatcher:
             return
 
         url = f"https://api.telegram.org/bot{self.token}/sendMessage"
-        text = f"Nueva Licitación:\n{payload.get('titulo')}\n{payload.get('url_fuente')}"
+        score = payload.get("score_riesgo", 0)
+        semaforo = "🟢" if score < 30 else ("🟡" if score < 70 else "🔴")
+        monto = payload.get("monto_estimado", "N/A")
+        moneda = payload.get("moneda", "")
+        entidad = payload.get("entidad_compradora", "N/A")
+        banderas_list = payload.get("banderas_rojas", [])
+        banderas_str = (
+            ", ".join(banderas_list)
+            if isinstance(banderas_list, list) and banderas_list
+            else "NINGUNA"
+        )
+
+        text = (
+            f"{semaforo} ALERTA OSINT: Licitacion Publica (Riesgo: {score}/100)\n"
+            f"Titulo: {payload.get('titulo')}\n"
+            f"Entidad: {entidad}\n"
+            f"Monto: {moneda} {monto}\n"
+            f"Banderas Rojas: {banderas_str}\n"
+            f"Enlace: {payload.get('url_fuente')}"
+        )
         data = {"chat_id": self.chat_id, "text": text}
 
         async for attempt in AsyncRetrying(

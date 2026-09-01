@@ -3,3 +3,10 @@
 .env
 .venv
 __pycache__/
+*.db
+*.db-shm
+*.db-wal
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

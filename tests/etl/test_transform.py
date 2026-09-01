@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 
@@ -19,6 +20,9 @@ def test_parsear_licitacion_valida() -> None:
     assert resultado.descripcion == "detalles del proyecto de obra"
     assert str(resultado.url_fuente) == "http://ejemplo.com/lic/1"
     assert resultado.fecha_publicacion == datetime(2026, 8, 31, 10, 0, 0, tzinfo=UTC)
+    assert resultado.monto_estimado == Decimal("1000.00")
+    assert resultado.moneda == "PEN"
+    assert resultado.entidad_compradora == "entidad publica general"
 
 
 def test_parsear_licitacion_incompleta() -> None:

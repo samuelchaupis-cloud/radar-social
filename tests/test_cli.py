@@ -10,9 +10,10 @@ def test_cli_parser():
     args = parser.parse_args(["crawler", "--interval", "120"])
     assert args.command == "crawler"
     assert args.interval == 120
-    
+
     args2 = parser.parse_args(["outbox"])
     assert args2.command == "outbox"
+
 
 @pytest.mark.asyncio
 async def test_async_main_crawler():
@@ -23,6 +24,7 @@ async def test_async_main_crawler():
                 mock_crawler.assert_called_once()
                 mock_outbox.assert_not_called()
 
+
 @pytest.mark.asyncio
 async def test_async_main_outbox():
     with patch("sys.argv", ["main.py", "outbox"]):
@@ -31,6 +33,7 @@ async def test_async_main_outbox():
                 await async_main()
                 mock_crawler.assert_not_called()
                 mock_outbox.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_async_main_all():

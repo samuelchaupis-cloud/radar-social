@@ -1,5 +1,6 @@
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -20,6 +21,10 @@ def test_chaos_licitacion_extra_forbid() -> None:
             descripcion="desc",
             url_fuente=HttpUrl("http://ejemplo.com"),
             fecha_publicacion=dt,
+            fecha_cierre=dt + timedelta(days=5),
+            entidad_compradora="Entidad",
+            monto_estimado=Decimal("1000.00"),
+            moneda="PEN",
             payload_malicioso="A" * 10000,
         )
     assert "Extra inputs are not permitted" in str(exc_info.value)
