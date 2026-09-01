@@ -14,6 +14,9 @@ def test_cli_parser():
     args2 = parser.parse_args(["outbox"])
     assert args2.command == "outbox"
 
+    args3 = parser.parse_args(["health"])
+    assert args3.command == "health"
+
 
 @pytest.mark.asyncio
 async def test_async_main_crawler():
@@ -43,3 +46,15 @@ async def test_async_main_all():
                 await async_main()
                 mock_crawler.assert_called_once()
                 mock_outbox.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_main_health():
+    with patch("sys.argv", ["main.py", "health"]):
+        with patch(
+            "radar_social.infrastructure.health.verificar_salud_sistema",
+            new_callable=AsyncMock,
+            return_value={"status": "HEALTHY", "database": "CONNECTED"},
+        ) as mock_health:
+            await async_main()
+            mock_health.assert_called_once()

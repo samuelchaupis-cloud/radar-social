@@ -20,6 +20,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("outbox", help="Run outbox daemon")
 
+    subparsers.add_parser("health", help="Check system health")
+
     all_parser = subparsers.add_parser("all", help="Run all daemons")
     all_parser.add_argument("--interval", type=int, default=3600, help="Interval in seconds")
 
@@ -29,6 +31,13 @@ def build_parser() -> argparse.ArgumentParser:
 async def async_main() -> None:
     parser = build_parser()
     args = parser.parse_args()
+
+    if args.command == "health":
+        from radar_social.infrastructure.health import verificar_salud_sistema
+
+        res = await verificar_salud_sistema()
+        logger.info("Health check result", **res)
+        return
 
     shutdown_event = asyncio.Event()
 
